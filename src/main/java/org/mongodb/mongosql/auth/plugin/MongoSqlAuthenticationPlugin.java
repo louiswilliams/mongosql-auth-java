@@ -115,15 +115,11 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
             for (SaslClient saslClient : saslClients) {
                 byte[] response = saslClient.evaluateChallenge(getNextChallenge(byteBuffer));
 
-                System.out.println("SASL Client is complete: " + saslClient.isComplete());
-                if (response != null) {
-                    writeByte(baos, (byte) (saslClient.isComplete() ? 1 : 0));
+                System.out.printf("SASL Client %s is complete: %s\n", saslClient.getMechanismName(), saslClient.isComplete());
+                writeByte(baos, (byte) (saslClient.isComplete() ? 1 : 0));
 
-                    writeInt(baos, response.length);
-                    writeBytes(baos, response);
-                } else {
-                    System.out.println("Received empty challenge from SASL Client: " + saslClient.getMechanismName());
-                }
+                writeInt(baos, response.length);
+                writeBytes(baos, response);
             }
 
             toServer.add(new Buffer(baos.toByteArray()));

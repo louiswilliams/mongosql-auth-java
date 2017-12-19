@@ -78,7 +78,11 @@ final class Gssapi {
         @Override
         public byte[] evaluateChallenge(final byte[] challenge) throws SaslException {
             try {
-                return context.initSecContext(challenge, 0 , challenge.length);
+                byte[] bytes = context.initSecContext(challenge, 0 , challenge.length);
+                if (bytes == null) {
+                    bytes = new byte[0];
+                }
+                return bytes;
             } catch (GSSException e) {
                 throw new SaslException("Error initiating GSS context", e);
             }
