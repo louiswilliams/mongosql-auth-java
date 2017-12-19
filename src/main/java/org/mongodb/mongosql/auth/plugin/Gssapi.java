@@ -17,13 +17,11 @@
 
 package org.mongodb.mongosql.auth.plugin;
 
+
 import org.ietf.jgss.*;
 
-import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
-import java.util.HashMap;
-import java.util.Map;
 
 final class Gssapi {
     private static final String SERVICE_NAME_DEFAULT_VALUE = "mongosql";
@@ -63,7 +61,7 @@ final class Gssapi {
 
         private GSSContext context;
 
-        GssapiSaslClient(GSSContext context) {
+        GssapiSaslClient(final GSSContext context) {
             this.context = context;
         }
 
@@ -78,7 +76,7 @@ final class Gssapi {
         }
 
         @Override
-        public byte[] evaluateChallenge(byte[] challenge) throws SaslException {
+        public byte[] evaluateChallenge(final byte[] challenge) throws SaslException {
             try {
                 return context.initSecContext(challenge, 0 , challenge.length);
             } catch (GSSException e) {
@@ -92,17 +90,25 @@ final class Gssapi {
         }
 
         @Override
-        public byte[] unwrap(byte[] incoming, int offset, int len) throws SaslException {
-            throw new UnsupportedOperationException("Not implemented");
+        public byte[] unwrap(final byte[] incoming, final int offset, final int len) throws SaslException {
+            try {
+                return context.unwrap(incoming, offset, len, new MessageProp(false));
+            } catch (GSSException e) {
+                throw new SaslException("Error unwrapping context", e);
+            }
         }
 
         @Override
-        public byte[] wrap(byte[] outgoing, int offset, int len) throws SaslException {
-            throw new UnsupportedOperationException("Not implemented");
+        public byte[] wrap(final byte[] outgoing, final int offset, final int len) throws SaslException {
+            try {
+                return context.wrap(outgoing, offset, len, new MessageProp(false));
+            } catch (GSSException e) {
+                throw new SaslException("Error unwrapping context", e);
+            }
         }
 
         @Override
-        public Object getNegotiatedProperty(String propName) {
+        public Object getNegotiatedProperty(final String propName) {
             throw new UnsupportedOperationException("Not implemented");
         }
 
@@ -115,4 +121,6 @@ final class Gssapi {
             }
         }
     }
+
+    private Gssapi() {}
 }
