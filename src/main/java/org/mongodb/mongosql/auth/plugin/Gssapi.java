@@ -38,6 +38,9 @@ final class Gssapi {
             GSSName serviceName = manager.createName(SERVICE_NAME_DEFAULT_VALUE + "@" + hostName, GSSName.NT_HOSTBASED_SERVICE);
 
             GSSContext context = manager.createContext(serviceName, new Oid(GSSAPI_OID), clientCreds, GSSContext.DEFAULT_LIFETIME);
+            context.requestCredDeleg(true);
+            context.requestMutualAuth(true);
+
             return new GssapiSaslClient(context);
 
         } catch (GSSException e) {
