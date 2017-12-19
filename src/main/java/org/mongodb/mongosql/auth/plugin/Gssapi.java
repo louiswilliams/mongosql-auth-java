@@ -17,11 +17,7 @@
 
 package org.mongodb.mongosql.auth.plugin;
 
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
+import org.ietf.jgss.*;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
@@ -34,11 +30,19 @@ final class Gssapi {
     private static final String GSSAPI_OID = "1.2.840.113554.1.2.2";
 
     static SaslClient createSaslClient(final String user, final String hostName) throws SaslException {
-        Map<String, Object> saslClientProperties = new HashMap<String, Object>();
-        saslClientProperties.put(Sasl.MAX_BUFFER, "0");
-        saslClientProperties.put(Sasl.CREDENTIALS, getGSSCredential(user));
 
-        return Sasl.createSaslClient(new String[]{"GSSAPI"}, user, SERVICE_NAME_DEFAULT_VALUE, hostName, saslClientProperties, null);
+        GSSCredential clientCreds = getGSSCredential(user);
+
+        try {
+            GSSManager manager = GSSManager.getInstance();
+            GSSName serviceName = manager.createName(SERVICE_NAME_DEFAULT_VALUE + "@" + hostName, GSSName.NT_HOSTBASED_SERVICE);
+
+            GSSContext context = manager.createContext(serviceName, new Oid(GSSAPI_OID), clientCreds, GSSContext.DEFAULT_LIFETIME);
+            return new GssapiSaslClient(context);
+
+        } catch (GSSException e) {
+            throw new SaslException("Error creating GSSAPI context", e);
+        }
     }
 
     private static GSSCredential getGSSCredential(final String userName) throws SaslException {
@@ -52,5 +56,60 @@ final class Gssapi {
         }
     }
 
-    private Gssapi() {}
+    private static class GssapiSaslClient implements SaslClient {
+
+        private GSSContext context;
+
+        GssapiSaslClient(GSSContext context) {
+            this.context = context;
+        }
+
+        @Override
+        public String getMechanismName() {
+            return "GSSAPI";
+        }
+
+        @Override
+        public boolean hasInitialResponse() {
+            return false;
+        }
+
+        @Override
+        public byte[] evaluateChallenge(byte[] challenge) throws SaslException {
+            try {
+                return context.initSecContext(challenge, 0 , challenge.length);
+            } catch (GSSException e) {
+                throw new SaslException("Error initiating GSS context", e);
+            }
+        }
+
+        @Override
+        public boolean isComplete() {
+            return context.isEstablished();
+        }
+
+        @Override
+        public byte[] unwrap(byte[] incoming, int offset, int len) throws SaslException {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
+        public byte[] wrap(byte[] outgoing, int offset, int len) throws SaslException {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
+        public Object getNegotiatedProperty(String propName) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        @Override
+        public void dispose() throws SaslException {
+            try {
+                context.dispose();
+            } catch (GSSException e) {
+                throw new SaslException("Error disposing GSS context", e);
+            }
+        }
+    }
 }
