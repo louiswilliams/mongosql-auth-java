@@ -95,6 +95,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
                 throw SQLError.createSQLException("Unexpected empty challenge ", SQLError.SQL_STATE_GENERAL_ERROR, null);
             }
 
+            System.out.println("== Buffer from server: " + fromServer.getBufLength());
             if (firstChallenge) {
                 firstChallenge = false;
                 toServer.add(new Buffer(new byte[0]));
@@ -107,6 +108,7 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
                 String mechanism = readString(byteBuffer);
                 int iterations = byteBuffer.getInt();
                 for (int i = 0; i < iterations; i++) {
+                    System.out.println("== Creating SASL client for mechanism" + mechanism);
                     saslClients.add(createSaslClient(mechanism));
                 }
             }
@@ -117,7 +119,6 @@ public class MongoSqlAuthenticationPlugin implements AuthenticationPlugin {
 
                 System.out.printf("SASL Client %s is complete: %s\n", saslClient.getMechanismName(), saslClient.isComplete());
                 writeByte(baos, (byte) (saslClient.isComplete() ? 1 : 0));
-
                 writeInt(baos, response.length);
                 writeBytes(baos, response);
             }

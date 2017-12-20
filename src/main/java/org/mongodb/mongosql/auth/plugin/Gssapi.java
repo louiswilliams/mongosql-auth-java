@@ -19,6 +19,7 @@ package org.mongodb.mongosql.auth.plugin;
 
 
 import org.ietf.jgss.*;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
