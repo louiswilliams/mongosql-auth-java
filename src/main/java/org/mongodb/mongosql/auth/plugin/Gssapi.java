@@ -23,6 +23,9 @@ import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 final class Gssapi {
     private static final String SERVICE_NAME_DEFAULT_VALUE = "mongosql";
@@ -79,11 +82,24 @@ final class Gssapi {
         @Override
         public byte[] evaluateChallenge(final byte[] challenge) throws SaslException {
             try {
-                byte[] bytes = context.initSecContext(challenge, 0 , challenge.length);
-                if (bytes == null) {
-                    bytes = new byte[0];
+                byte[] bytes;
+                if (context.isEstablished()) {
+                    GSSName initiator = context.getSrcName();
+
+                    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                    try {
+                        buf.write(new byte[]{1, 0, 0, 0});
+                        buf.write(initiator.export());
+                        bytes = wrap(buf.toByteArray(), 0, buf.size());
+                    } catch (IOException e) {
+                        throw new SaslException("Error writing to buffer", e);
+                    }
+
+                } else {
+                    bytes = context.initSecContext(challenge, 0 , challenge.length);
                 }
-                return bytes;
+
+                return (bytes == null) ? new byte[0] : bytes;
             } catch (GSSException e) {
                 throw new SaslException("Error initiating GSS context", e);
             }
@@ -97,7 +113,7 @@ final class Gssapi {
         @Override
         public byte[] unwrap(final byte[] incoming, final int offset, final int len) throws SaslException {
             try {
-                return context.unwrap(incoming, offset, len, new MessageProp(false));
+                return context.unwrap(incoming, offset, len, new MessageProp(0, false));
             } catch (GSSException e) {
                 throw new SaslException("Error unwrapping context", e);
             }
@@ -106,7 +122,7 @@ final class Gssapi {
         @Override
         public byte[] wrap(final byte[] outgoing, final int offset, final int len) throws SaslException {
             try {
-                return context.wrap(outgoing, offset, len, new MessageProp(false));
+                return context.wrap(outgoing, offset, len, new MessageProp(0, false));
             } catch (GSSException e) {
                 throw new SaslException("Error unwrapping context", e);
             }
