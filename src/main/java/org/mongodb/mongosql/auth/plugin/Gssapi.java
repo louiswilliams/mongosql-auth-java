@@ -25,21 +25,25 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 final class Gssapi {
     private static final String SERVICE_NAME_DEFAULT_VALUE = "mongosql";
     private static final String GSSAPI_OID = "1.2.840.113554.1.2.2";
+    private static final String GSSAPI_SERVICE_OID = "1.2.840.113554.1.2.2.1";
 
     static SaslClient createSaslClient(final String user, final String hostName) throws SaslException {
 
         GSSCredential clientCreds = getGSSCredential(user);
 
-        try {
-            GSSManager manager = GSSManager.getInstance();
-            GSSName serviceName = manager.createName(SERVICE_NAME_DEFAULT_VALUE + "@" + hostName, GSSName.NT_HOSTBASED_SERVICE);
 
-            GSSContext context = manager.createContext(serviceName, new Oid(GSSAPI_OID), clientCreds, GSSContext.DEFAULT_LIFETIME);
+        try {
+            Oid krb5Mechanism = new Oid(GSSAPI_OID);
+            Oid krb5PrincipalName = new Oid(GSSAPI_SERVICE_OID);
+
+            GSSManager manager = GSSManager.getInstance();
+            GSSName serviceName = manager.createName(SERVICE_NAME_DEFAULT_VALUE + "/" + hostName, krb5PrincipalName);
+
+            GSSContext context = manager.createContext(serviceName, krb5Mechanism, clientCreds, GSSContext.DEFAULT_LIFETIME);
             context.requestCredDeleg(true);
             context.requestMutualAuth(true);
 
